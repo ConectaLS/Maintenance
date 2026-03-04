@@ -1,0 +1,5 @@
+{
+  "name": "Chat Maintenance System",
+  "description": "A chat application with a manageable maintenance mode system using Express, SQLite, and WebSockets.",
+  "requestFramePermissions": []
+}
