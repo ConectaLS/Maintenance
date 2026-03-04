@@ -18,6 +18,7 @@ interface ChatMessage {
 export default function App() {
   const [maintenance, setMaintenance] = useState<MaintenanceStatus | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [customMessage, setCustomMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [username, setUsername] = useState('User_' + Math.floor(Math.random() * 1000));
@@ -27,7 +28,10 @@ export default function App() {
     // 1. Initial Maintenance Check
     fetch('/api/system/status')
       .then(res => res.json())
-      .then(data => setMaintenance(data))
+      .then(data => {
+        setMaintenance(data);
+        setCustomMessage(data.message);
+      })
       .catch(err => console.error("Failed to fetch status", err));
 
     // 2. WebSocket Connection
@@ -73,12 +77,28 @@ export default function App() {
       const res = await fetch('/api/admin/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: nextStatus })
+        body: JSON.stringify({ active: nextStatus, message: customMessage })
       });
       const data = await res.json();
       setMaintenance({ isActive: data.isActive, message: data.message });
     } catch (err) {
       console.error("Failed to toggle maintenance", err);
+    }
+  };
+
+  const updateMaintenanceMessage = async () => {
+    if (!isAdmin) return;
+    try {
+      const res = await fetch('/api/admin/maintenance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: maintenance?.isActive, message: customMessage })
+      });
+      const data = await res.json();
+      setMaintenance({ isActive: data.isActive, message: data.message });
+      alert("Mensagem atualizada com sucesso!");
+    } catch (err) {
+      console.error("Failed to update message", err);
     }
   };
 
@@ -203,6 +223,22 @@ export default function App() {
                     ) : (
                       <ToggleLeft size={32} />
                     )}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Mensagem de Aviso</label>
+                  <textarea 
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    placeholder="Ex: Voltamos em 30 minutos..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-amber-400/50 min-h-[80px] resize-none"
+                  />
+                  <button 
+                    onClick={updateMaintenanceMessage}
+                    className="w-full bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold py-2 rounded-lg transition-colors uppercase tracking-widest"
+                  >
+                    Atualizar Mensagem
                   </button>
                 </div>
 
