@@ -24,9 +24,34 @@ export default function App() {
   const [username, setUsername] = useState('User_' + Math.floor(Math.random() * 1000));
   const socketRef = useRef<WebSocket | null>(null);
 
+  // --- FUNÇÃO AUXILIAR DE FETCH (INTERCEPTOR SEGURO) ---
+  const appFetch = async (url: string, options?: RequestInit) => {
+    try {
+      const response = await fetch(url, options);
+      
+      // Se a API retornar 503 e indicar manutenção ativa
+      if (response.status === 503) {
+        const clone = response.clone();
+        try {
+          const data = await clone.json();
+          if (data.maintenanceActive) {
+            setMaintenance({ isActive: true, message: data.message });
+          }
+        } catch (e) {
+          // Fallback se não for JSON
+        }
+      }
+      return response;
+    } catch (error) {
+      console.error("Fetch error:", error);
+      throw error;
+    }
+  };
+  // ----------------------------------------------------
+
   useEffect(() => {
     // 1. Initial Maintenance Check
-    fetch('/api/system/status')
+    appFetch('/api/system/status')
       .then(res => res.json())
       .then(data => {
         setMaintenance(data);
@@ -74,7 +99,7 @@ export default function App() {
     const nextStatus = !maintenance?.isActive;
     
     try {
-      const res = await fetch('/api/admin/maintenance', {
+      const res = await appFetch('/api/admin/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: nextStatus, message: customMessage })
@@ -89,7 +114,7 @@ export default function App() {
   const updateMaintenanceMessage = async () => {
     if (!isAdmin) return;
     try {
-      const res = await fetch('/api/admin/maintenance', {
+      const res = await appFetch('/api/admin/maintenance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: maintenance?.isActive, message: customMessage })

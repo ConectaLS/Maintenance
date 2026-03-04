@@ -40,8 +40,13 @@ const maintenanceMiddleware = (req: express.Request, res: express.Response, next
   // Allow these paths even in maintenance
   const allowedPaths = ['/api/system/status', '/api/admin/maintenance', '/api/auth/login'];
   
-  if (isActive && !allowedPaths.includes(req.path)) {
-    return res.status(503).json({ error: "Service Unavailable", message: getMaintenanceStatus().message });
+  // SÓ bloqueia se for uma rota de API e não estiver na lista de permitidos
+  if (isActive && req.path.startsWith('/api/') && !allowedPaths.includes(req.path)) {
+    return res.status(503).json({ 
+      error: "Service Unavailable", 
+      message: getMaintenanceStatus().message,
+      maintenanceActive: true 
+    });
   }
   next();
 };
